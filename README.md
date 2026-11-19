@@ -20,7 +20,7 @@ Si Render tarda en despertar, la primera lectura puede demorar. Si la portada mu
 3. Publica un proyecto desde **Proyectos → Publicar proyecto**. Vuelve a **Proyectos** y busca por texto o tecnología. Esto muestra HU‑19.
 4. Abre **Discusiones → Nueva discusión**. Escribe una pregunta de al menos 20 caracteres, elige tecnología y pulsa **Insertar bloque de código**. Cambia el ejemplo por código real. La vista previa muestra resaltado y el detalle permite copiarlo.
 5. Con otra cuenta, abre la discusión, añade un comentario y prueba reacciones. Puedes visitar el perfil, seguir a la persona y enviarle un mensaje. **Mensajes** muestra la bandeja y el historial.
-6. Para HU‑20, inicia sesión con un usuario que tenga `auditoria:consultar`; aparecerá **Auditoría** en la cabecera. Filtra por operación o fecha. El backend exige los permisos y MFA que correspondan. HU‑21 se muestra en los logs JSON del backend; los errores de la interfaz enseñan su `traceId` para buscarlos allí.
+6. Para HU‑20, inicia sesión con un usuario que tenga `auditoria:consultar`; aparecerá **Auditoría** en la cabecera. Filtra por operación o fecha. HU‑21 se muestra en los logs JSON del backend; los errores de la interfaz enseñan su `traceId` para buscarlos allí.
 
 ## Alcance y decisiones de la interfaz
 
@@ -28,7 +28,7 @@ Si Render tarda en despertar, la primera lectura puede demorar. Si la portada mu
 - El plus para desarrolladores es Markdown sencillo con bloques de código resaltados y botón **Copiar**. El contenido del usuario se escapa antes de insertarlo en el HTML.
 - La edición de proyectos no aparece en la interfaz: la API publicada lista proyectos, pero no ofrece un `GET /api/v1/proyectos/{id}` con descripción, licencia y URL de demo para rellenar correctamente un formulario de reemplazo completo. La API backend conserva esa capacidad.
 - La edición del perfil usa la lectura privada `/perfiles/{id}/edicion` si está desplegada. Si aún no está, usa el perfil público para la configuración inicial y pide revisar niveles y años antes de guardar. No se inventan esos datos.
-- La auditoría requiere una cuenta ADMIN con el permiso efectivo; una cuenta común no verá la opción. La configuración de MFA de administradores corresponde al backend y no se implementa en esta interfaz.
+- La auditoría requiere una cuenta ADMIN con el permiso efectivo; una cuenta común no verá la opción. El backend actual no tiene inscripción ni verificación real de MFA: para la demo, el equipo debe preparar el rol y la marca `mfa_habilitado` en la base de pruebas, según `docs/pruebas-sprint2.md` del repositorio backend. Esta interfaz no crea administradores.
 
 ## Verificación y compilación
 
