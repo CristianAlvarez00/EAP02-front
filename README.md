@@ -17,11 +17,11 @@ Si Render tarda en despertar, la primera lectura puede demorar. Si la portada mu
 
 | Historia | Estado y dónde verla |
 | --- | --- |
-| **HU-19 · Reporte de actividad y crecimiento** | **Pendiente.** El backend contiene la tabla `metricas_diarias` y su procedimiento de consolidación, pero no tiene un endpoint de reporte ni una pantalla en este frontend. Buscar proyectos corresponde a HU-09, no a HU-19. |
+| **HU-19 · Reporte de actividad y crecimiento** | Integrada en `#/reportes/actividad`. El enlace **Actividad** aparece al iniciar sesión con un token que incluya `metricas:consultar`. Permite consultar hasta 92 días, agrupar el crecimiento por semana o mes y ver totales o un estado vacío. Buscar proyectos corresponde a HU-09. |
 | **HU-20 · Registro de auditoría** | Integrada en `#/auditoria`. El enlace **Auditoría** aparece al iniciar sesión con un token que incluya `auditoria:consultar`. Permite filtrar por operación, actor, tabla y fechas. |
 | **HU-21 · Logging estructurado con traceId** | Es una función del backend. Se verifica en **Render → servicio backend → Logs** comparando el `traceId` de una respuesta de error con el evento JSON del servidor. El frontend muestra ese identificador como «Referencia» cuando la API devuelve un error. No existe una pantalla de logs para usuarios. |
 
-Para mostrar HU-20, inicia sesión como administrador de demo, abre **Auditoría** y filtra por `INICIO_SESION`. Para mostrar HU-21, provoca **un** intento de inicio de sesión con contraseña incorrecta, copia la «Referencia» que muestra el frontend y busca ese `traceId` en Render Logs. Evita repetir el intento: el backend bloquea temporalmente la cuenta tras cinco fallos.
+Para mostrar HU-19, inicia sesión como administrador de demo, abre **Actividad**, consulta los últimos 30 días y cambia la agrupación de **semana** a **mes**. Con un rango antiguo sin datos se muestra el estado vacío. Si la cuenta ADMIN ya estaba abierta antes de desplegar la migración V13, cierra sesión e inicia sesión de nuevo para obtener el permiso `metricas:consultar` en el token. Para HU-20, abre **Auditoría** y filtra por `INICIO_SESION`. Para HU-21, provoca **un** intento de inicio de sesión con contraseña incorrecta, copia la «Referencia» que muestra el frontend y busca ese `traceId` en Render Logs. Evita repetir el intento: el backend bloquea temporalmente la cuenta tras cinco fallos.
 
 ## Recorrido de demo
 
@@ -30,11 +30,11 @@ Para mostrar HU-20, inicia sesión como administrador de demo, abre **Auditoría
 3. Publica un proyecto desde **Proyectos → Publicar proyecto**. Vuelve a **Proyectos** y busca por texto o tecnología. Esto muestra la búsqueda de proyectos (HU‑09).
 4. Abre **Discusiones → Nueva discusión**. Escribe una pregunta de al menos 20 caracteres, elige tecnología y pulsa **Insertar bloque de código**. Cambia el ejemplo por código real. La vista previa muestra resaltado y el detalle permite copiarlo.
 5. Con otra cuenta, abre la discusión, añade un comentario y prueba reacciones. Puedes visitar el perfil, seguir a la persona y enviarle un mensaje. **Mensajes** muestra la bandeja y el historial.
-6. Para HU‑20, inicia sesión con un usuario que tenga `auditoria:consultar`; aparecerá **Auditoría** en la cabecera. Filtra por operación o fecha. HU‑21 se muestra en los logs JSON del backend; los errores de la interfaz enseñan su `traceId` para buscarlos allí.
+6. Para HU‑19 y HU‑20, inicia sesión con un administrador que tenga `metricas:consultar` y `auditoria:consultar`; aparecerán **Actividad** y **Auditoría** en la cabecera. HU‑21 se muestra en los logs JSON del backend; los errores de la interfaz enseñan su `traceId` para buscarlos allí.
 
 ## Alcance y decisiones de la interfaz
 
-- Se incluyen registro, inicio y cierre de sesión, perfil público y configuración inicial, catálogo de tecnologías, seguimiento, proyectos, búsqueda HU‑09, discusiones, comentarios, reacciones, mensajes y auditoría HU‑20 según permisos.
+- Se incluyen registro, inicio y cierre de sesión, perfil público y configuración inicial, catálogo de tecnologías, seguimiento, proyectos, búsqueda HU‑09, discusiones, comentarios, reacciones, mensajes, reporte de actividad HU‑19 y auditoría HU‑20 según permisos.
 - El plus para desarrolladores es Markdown sencillo con bloques de código resaltados y botón **Copiar**. El contenido del usuario se escapa antes de insertarlo en el HTML.
 - La edición de proyectos no aparece en la interfaz: la API publicada lista proyectos, pero no ofrece un `GET /api/v1/proyectos/{id}` con descripción, licencia y URL de demo para rellenar correctamente un formulario de reemplazo completo. La API backend conserva esa capacidad.
 - La edición del perfil usa la lectura privada `/perfiles/{id}/edicion` si está desplegada. Si aún no está, usa el perfil público para la configuración inicial y pide revisar niveles y años antes de guardar. No se inventan esos datos.

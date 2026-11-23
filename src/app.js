@@ -1,4 +1,5 @@
 import { escapeHtml as esc, safeHttpsUrl as safeUrl, renderMarkdown as rich } from './markdown.js';
+import { reportDefaults, validateReportRange, renderReportData } from './report.js';
 
 const API = '/api/v1';
 const main = document.querySelector('#contenido');
@@ -34,7 +35,7 @@ function setSession(data) {
 }
 function renderSession() {
   sessionArea.innerHTML = state.user
-    ? `<span class="session-name">@${esc(state.user.name)}</span>${can('auditoria:consultar') ? button('Auditoría', '#/auditoria', 'btn-ghost') : ''}${button('Mi perfil', '#/perfil', 'btn-ghost')}<button class="btn btn-small" data-action="logout">Salir</button>`
+    ? `<span class="session-name">@${esc(state.user.name)}</span>${can('metricas:consultar') ? button('Actividad', '#/reportes/actividad', 'btn-ghost') : ''}${can('auditoria:consultar') ? button('Auditoría', '#/auditoria', 'btn-ghost') : ''}${button('Mi perfil', '#/perfil', 'btn-ghost')}<button class="btn btn-small" data-action="logout">Salir</button>`
     : `${button('Entrar', '#/entrar', 'btn-ghost')}${button('Crear cuenta', '#/registro', 'btn-primary')}`;
 }
 async function refreshSession() {
@@ -183,6 +184,26 @@ async function auditPage(query) {
   const rows = data.contenido?.map(row => `<tr><td>${date(row.fecha)}</td><td>${esc(row.accion)}</td><td>${esc(row.actor?.nombreUsuario || 'Sistema')}</td><td>${esc(row.objeto?.tabla || '')}<small>${esc(row.objeto?.registroId || '')}</small></td><td>${esc(row.traceId || '')}</td></tr>`).join('') || '';
   return `${heading('Administración', 'Auditoría', 'Acciones sensibles registradas por el servidor.')}<form id="audit-form" class="filters"><div class="field"><label>Operación</label><input name="operacion" value="${esc(params.get('operacion') || '')}" placeholder="Ej. MENSAJE_ENVIADO"></div><div class="field"><label>Actor ID</label><input name="actorId" value="${esc(params.get('actorId') || '')}" placeholder="UUID del usuario"></div><div class="field"><label>Tabla</label><input name="tabla" value="${esc(params.get('tabla') || '')}" placeholder="Ej. usuario"></div><div class="field"><label>Desde</label><input name="desde" type="date" value="${esc(params.get('desde') || '')}"></div><div class="field"><label>Hasta</label><input name="hasta" type="date" value="${esc(params.get('hasta') || '')}"></div><button class="btn" type="submit">Filtrar</button></form>${rows ? `<div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Acción</th><th>Actor</th><th>Objeto</th><th>Trace ID</th></tr></thead><tbody>${rows}</tbody></table></div>` : empty('Sin registros', 'No hay eventos que coincidan con estos filtros.')}<div class="button-row">${data.pagina > 0 ? button('Anterior', `#/auditoria?${esc(new URLSearchParams({ ...Object.fromEntries(params), pagina: data.pagina - 1 }))}`) : ''}${data.pagina + 1 < data.totalPaginas ? button('Siguiente', `#/auditoria?${esc(new URLSearchParams({ ...Object.fromEntries(params), pagina: data.pagina + 1 }))}`) : ''}</div>`;
 }
+async function activityReportPage(query) {
+  if (!requireUser()) return null;
+  if (!can('metricas:consultar')) throw Object.assign(new Error('Esta sección requiere permiso para consultar métricas.'), { status: 403 });
+  const defaults = reportDefaults();
+  const params = new URLSearchParams(query);
+  const filters = {
+    desde: params.get('desde') ?? defaults.desde,
+    hasta: params.get('hasta') ?? defaults.hasta,
+    agrupacion: params.get('agrupacion') ?? defaults.agrupacion
+  };
+  const form = `${heading('Administración · HU-19', 'Actividad y crecimiento', 'Una vista de cómo se mueve la comunidad en el período elegido.')}<form id="report-form" class="report-filters panel"><div class="field"><label for="report-from">Desde</label><input id="report-from" name="desde" type="date" value="${esc(filters.desde)}" max="${defaults.hasta}" required></div><div class="field"><label for="report-to">Hasta</label><input id="report-to" name="hasta" type="date" value="${esc(filters.hasta)}" max="${defaults.hasta}" required></div><div class="field"><label for="report-group">Agrupar nuevos usuarios</label><select id="report-group" name="agrupacion"><option value="SEMANA" ${filters.agrupacion === 'SEMANA' ? 'selected' : ''}>Por semana</option><option value="MES" ${filters.agrupacion === 'MES' ? 'selected' : ''}>Por mes</option></select></div><button class="btn btn-primary" type="submit">Ver reporte</button><p class="help">Fechas de Colombia, con ambos días incluidos. Máximo 92 días.</p></form>`;
+  try {
+    const valid = validateReportRange(filters);
+    const data = await api(`/reportes/actividad?${new URLSearchParams(valid)}`);
+    return `${form}<div class="report-period">Del ${esc(data.desde)} al ${esc(data.hasta)} · Agrupado por ${data.agrupacion === 'MES' ? 'mes' : 'semana'}</div>${renderReportData(data)}`;
+  } catch (error) {
+    if (error.status === 401) throw error;
+    return `${form}${failure(error)}`;
+  }
+}
 function authPage(register) {
   return `<div class="auth-wrap"><div class="panel"><div class="eyebrow">${register ? 'Únete a DevNet' : 'Bienvenido de nuevo'}</div><h1 class="page-title">${register ? 'Crea tu cuenta' : 'Inicia sesión'}</h1><p class="page-subtitle">${register ? 'Comparte tus proyectos y aprende con otros desarrolladores.' : 'Retoma tus conversaciones y proyectos.'}</p><hr class="divider"><form id="${register ? 'register-form' : 'login-form'}">${register ? `<div class="field"><label for="auth-name">Nombre de usuario</label><input id="auth-name" name="nombreUsuario" pattern="[a-zA-Z0-9][a-zA-Z0-9_-]{2,29}" minlength="3" maxlength="30" required autocomplete="username"><small>Entre 3 y 30 caracteres; empieza con letra o número.</small></div>` : ''}<div class="field"><label for="auth-email">Correo</label><input id="auth-email" name="correo" type="email" required autocomplete="email"></div><div class="field"><label for="auth-password">Contraseña</label><input id="auth-password" name="clave" type="password" minlength="8" required autocomplete="${register ? 'new-password' : 'current-password'}"></div><button class="btn btn-primary" type="submit">${register ? 'Crear cuenta' : 'Entrar'}</button></form><hr class="divider"><p class="muted">${register ? '¿Ya tienes cuenta?' : '¿Nuevo en DevNet?'} <a class="brand-accent" href="#/${register ? 'entrar' : 'registro'}">${register ? 'Inicia sesión' : 'Regístrate'}</a></p></div></div>`;
 }
@@ -223,6 +244,7 @@ async function route() {
     else if (section === 'crear' && parts[1] === 'proyecto') html = await createProject();
     else if (section === 'entrar') html = authPage(false);
     else if (section === 'registro') html = authPage(true);
+    else if (section === 'reportes' && parts[1] === 'actividad') html = await activityReportPage(query);
     else if (section === 'auditoria') html = await auditPage(query);
     else html = empty('Página no encontrada', 'Vuelve a explorar la comunidad.');
     if (current === state.view && html !== null) main.innerHTML = html;
@@ -273,6 +295,11 @@ async function submit(event) {
       const params = new URLSearchParams();
       for (const key of ['operacion', 'actorId', 'tabla', 'desde', 'hasta']) if (data.get(key)) params.set(key, String(data.get(key)));
       location.hash = `#/auditoria${params.size ? `?${params}` : ''}`;
+    } else if (form.id === 'report-form') {
+      const filters = validateReportRange({ desde: String(data.get('desde') || ''), hasta: String(data.get('hasta') || ''), agrupacion: String(data.get('agrupacion') || '') });
+      const next = `#/reportes/actividad?${new URLSearchParams(filters)}`;
+      if (location.hash === next) await route();
+      else location.hash = next;
     } else if (form.dataset.form === 'comment') {
       await api(`/publicaciones/${form.dataset.id}/comentarios`, { method: 'POST', body: { contenido: data.get('contenido') } });
       notify('Comentario publicado.'); await route();
